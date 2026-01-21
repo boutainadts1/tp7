@@ -1,58 +1,123 @@
 pipeline {
     agent any
 
+    environment {
+        MAVEN_USER = credentials('maven-user')
+        MAVEN_PASSWORD = credentials('maven-password')
+    }
+
     stages {
 
+        /* ===================== TEST ===================== */
         stage('Test') {
             steps {
-                sh 'gradle test'
-                junit 'build/test-results/test/*.xml'
-                sh 'gradle cucumber'
+                echo "Lancement des tests unitaires"
+                bat './gradlew test'
             }
-        }
-
-        stage('Code Analysis') {
-            steps {
-                withSonarQubeEnv('SonarQube') {
-                    sh 'gradle sonarqube'
+            post {
+                always {
+                    junit 'build/test-results/**/*.xml'
                 }
             }
         }
 
-        stage('Quality Gate') {
+        /* ===================== CUCUMBER REPORT ===================== */
+        stage('Generate HTML report') {
             steps {
-                timeout(time: 1, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
+                echo "Génération du rapport Cucumber"
+                cucumber(
+                    buildStatus: 'UNSTABLE',
+                    reportTitle: 'Cucumber Test Report',
+                    fileIncludePattern: '**/cucumber*.json',
+                    trendsLimit: 10
+                )
+            }
+        }
+
+        /* ===================== CODE ANALYSIS ===================== */
+        stage('Analyse du Code') {
+            steps {
+                echo "Analyse SonarQube"
+                withSonarQubeEnv('sonar') {
+                    bat './gradlew sonarqube'
                 }
             }
         }
 
+        /* ===================== QUALITY GATE ===================== */
+        stage('Code Quality') {
+            steps {
+                script {
+                    echo "Vérification du Quality Gate"
+                    timeout(time: 2, unit: 'MINUTES') {
+                        def qg = waitForQualityGate()
+                        if (qg.status != 'OK') {
+                            error "❌ Quality Gate échoué : ${qg.status}"
+                        }
+                        echo "✅ Quality Gate validé"
+                    }
+                }
+            }
+        }
+
+        /* ===================== BUILD ===================== */
         stage('Build') {
             steps {
-                sh 'gradle build'
-                sh 'gradle javadoc'
-                archiveArtifacts artifacts: 'build/libs/*.jar'
+                echo "Construction du projet"
+                bat './gradlew clean build'
+                bat './gradlew javadoc'
+
+                archiveArtifacts artifacts: 'build/libs/*.jar', fingerprint: true
                 archiveArtifacts artifacts: 'build/docs/javadoc/**'
             }
         }
 
+        /* ===================== DEPLOY ===================== */
         stage('Deploy') {
             steps {
-                sh 'gradle publish'
+                echo "Déploiement vers Maven Repository"
+                bat """
+                    ./gradlew  publish^
+                    -PMAVEN_USER=${MAVEN_USER} ^
+                    -PMAVEN_PASSWORD=${MAVEN_PASSWORD}
+                """
+            }
+        }
+
+        /* ===================== NOTIFICATION ===================== */
+        stage('Notification') {
+            steps {
+                slackSend(
+                    channel: '#tp-jenkins',
+                    message: '🚀 Déploiement réussi',
+                    color: 'good',
+                    tokenCredentialId: 'slack-bot-token'
+                )
             }
         }
     }
 
+    /* ===================== POST ACTIONS ===================== */
     post {
-        success {
-            mail to: "team@tp7.com",
-                 subject: "TP7 deployed",
-                 body: "Deployment success"
+        always {
+            echo "Pipeline terminé"
         }
+
+        success {
+            emailext(
+                subject: "✅ Build réussi - Jenkins",
+                body: "Le pipeline Jenkins s'est exécuté avec succès.",
+                to: "doulateserouriboutaina@gmail.com"
+            )
+        }
+
         failure {
-            mail to: "team@tp7.com",
-                 subject: "TP7 failed",
-                 body: "Pipeline failed"
+            slackSend(
+                channel: '#general',
+                message: '❌ Pipeline Jenkins échoué',
+                color: 'danger',
+                tokenCredentialId: 'slack-bot-token'
+            )
         }
     }
 }
