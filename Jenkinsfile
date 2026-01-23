@@ -73,16 +73,21 @@ pipeline {
         }
 
         /* ===================== DEPLOY ===================== */
-        stage('Deploy') {
-            steps {
-                echo "Déploiement vers Maven Repository"
-                bat """
-                    ./gradlew  publish^
-                    -PMAVEN_USER=${MAVEN_USER} ^
-                    -PMAVEN_PASSWORD=${MAVEN_PASSWORD}
-                """
-            }
-        }
+      stage('Deploy') {
+          steps {
+              echo "Déploiement vers Maven Repository"
+              withCredentials([
+                  usernamePassword(credentialsId: 'maven-user', usernameVariable: 'MVN_USER', passwordVariable: 'MVN_PWD')
+              ]) {
+                  bat """
+                      ./gradlew publish ^
+                      -PMAVEN_USER=%MVN_USER% ^
+                      -PMAVEN_PASSWORD=%MVN_PWD%
+                  """
+              }
+          }
+      }
+
 
         /* ===================== NOTIFICATION ===================== */
         stage('Notification') {
