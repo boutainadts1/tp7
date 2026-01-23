@@ -93,6 +93,7 @@ pipeline {
         stage('Notification') {
             steps {
                 slackSend(
+                teamDomain: 'jenkins-yyg2034',
                     channel: '#tp-jenkins',
                     message: '🚀 Déploiement réussi',
                     color: 'good',
