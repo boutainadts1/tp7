@@ -85,7 +85,7 @@ pipeline {
         stage('Notification') {
             steps {
                 slackSend(
-                     workspace: 'jenkins',   // nom exact du workspace
+                    teamDomain: 'jenkins-yyg2034',  // nom exact du workspace
                     channel: '#tp-jenkins',          // channel existant
                     message: '🚀 Déploiement réussi',
                     color: 'good',
