@@ -8,7 +8,6 @@ pipeline {
 
     stages {
 
-        /* ===================== TEST ===================== */
         stage('Test') {
             steps {
                 echo "Lancement des tests unitaires"
@@ -21,10 +20,10 @@ pipeline {
             }
         }
 
-        /* ===================== CUCUMBER REPORT ===================== */
         stage('Generate HTML report') {
             steps {
                 echo "Génération du rapport Cucumber"
+                // Assurez-vous que plugin Cucumber est installé
                 cucumber(
                     buildStatus: 'UNSTABLE',
                     reportTitle: 'Cucumber Test Report',
@@ -34,7 +33,6 @@ pipeline {
             }
         }
 
-        /* ===================== CODE ANALYSIS ===================== */
         stage('Analyse du Code') {
             steps {
                 echo "Analyse SonarQube"
@@ -44,7 +42,6 @@ pipeline {
             }
         }
 
-        /* ===================== QUALITY GATE ===================== */
         stage('Code Quality') {
             steps {
                 script {
@@ -60,50 +57,45 @@ pipeline {
             }
         }
 
-        /* ===================== BUILD ===================== */
         stage('Build') {
             steps {
                 echo "Construction du projet"
                 bat './gradlew clean build'
                 bat './gradlew javadoc'
-
                 archiveArtifacts artifacts: 'build/libs/*.jar', fingerprint: true
                 archiveArtifacts artifacts: 'build/docs/javadoc/**'
             }
         }
 
-        /* ===================== DEPLOY ===================== */
-      stage('Deploy') {
-          steps {
-              echo "Déploiement vers Maven Repository"
-              withCredentials([
-                  usernamePassword(credentialsId: 'maven-user', usernameVariable: 'MVN_USER', passwordVariable: 'MVN_PWD')
-              ]) {
-                  bat """
-                      ./gradlew publish ^
-                      -PMAVEN_USER=%MVN_USER% ^
-                      -PMAVEN_PASSWORD=%MVN_PWD%
-                  """
-              }
-          }
-      }
+        stage('Deploy') {
+            steps {
+                echo "Déploiement vers Maven Repository"
+                withCredentials([
+                    usernamePassword(credentialsId: 'maven-user', usernameVariable: 'MVN_USER', passwordVariable: 'MVN_PWD')
+                ]) {
+                    bat """
+                        ./gradlew publish ^
+                        -PMAVEN_USER=%MVN_USER% ^
+                        -PMAVEN_PASSWORD=%MVN_PWD%
+                    """
+                }
+            }
+        }
 
-
-        /* ===================== NOTIFICATION ===================== */
         stage('Notification') {
             steps {
                 slackSend(
-                teamDomain: 'jenkins-yyg2034',
-                    channel: '#tp-jenkins',
+                    teamDomain: 'jenkins-yyg2034',  // nom exact du workspace
+                    channel: '#tp-jenkins',          // channel existant
                     message: '🚀 Déploiement réussi',
                     color: 'good',
                     tokenCredentialId: 'slack-bot-token'
                 )
             }
         }
+
     }
 
-    /* ===================== POST ACTIONS ===================== */
     post {
         always {
             echo "Pipeline terminé"
@@ -119,7 +111,8 @@ pipeline {
 
         failure {
             slackSend(
-                channel: '#general',
+                teamDomain: 'jenkins-yyg2034',
+                channel: '#tp-jenkins',
                 message: '❌ Pipeline Jenkins échoué',
                 color: 'danger',
                 tokenCredentialId: 'slack-bot-token'
