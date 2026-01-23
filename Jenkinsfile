@@ -1,5 +1,5 @@
 pipeline {
-    agent any
+     agent { label 'build' }
 
     environment {
         MAVEN_USER = credentials('maven-user')
