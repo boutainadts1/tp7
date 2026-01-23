@@ -105,7 +105,7 @@ pipeline {
             emailext(
                 subject: "✅ Build réussi - Jenkins",
                 body: "Le pipeline Jenkins s'est exécuté avec succès.",
-                to: "doulateserouriboutaina@gmail.com"
+                to: "mb_doulateserouri@esi.dz"
             )
         }
 
