@@ -85,7 +85,7 @@ pipeline {
         stage('Notification') {
             steps {
                 slackSend(
-                    teamDomain: 'jenkins',  // nom exact du workspace
+                    teamDomain: 'jenkinstp7',  // nom exact du workspace
                     channel: '#tp-jenkins',          // channel existant
                     message: '🚀 Déploiement réussi',
                     color: 'good',
@@ -111,7 +111,7 @@ pipeline {
 
         failure {
             slackSend(
-                teamDomain: 'jenkins-yyg2034',
+                teamDomain: 'jenkinstp7',
                 channel: '#tp-jenkins',
                 message: '❌ Pipeline Jenkins échoué',
                 color: 'danger',
