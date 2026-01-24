@@ -81,7 +81,7 @@ pipeline {
                 }
             }
         }
-//notification step
+//slack notification step
         stage('Notification') {
             steps {
                 slackSend(
